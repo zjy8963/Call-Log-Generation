@@ -55,7 +55,7 @@ object Constants {
 
     const val END_TIME_LABEL = "截止时间: "
 
-    const val END_TIME_CHECKBOX_LABEL = "设置截止时间（可选）"
+    const val END_TIME_CHECKBOX_LABEL = "截止时间（可选）"
 
     const val END_TIME_DEFAULT_OFFSET_HOURS = 1L // 默认截止时间为起始时间后24小时
 
