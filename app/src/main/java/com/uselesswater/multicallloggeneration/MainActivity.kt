@@ -66,7 +66,6 @@ import androidx.compose.ui.res.painterResource
 // 更新检查相关导入
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.size
@@ -84,7 +83,7 @@ import androidx.compose.material3.Divider
 class MainActivity : ComponentActivity() {
 
     private var permissionCallback: ((Boolean) -> Unit)? = null
-    
+
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -166,7 +165,20 @@ private fun isValidPhoneNumber(phoneNumber: String): Boolean {
     // 只允许11位手机号
     return cleanNumber.length == 11
 }
+/**
+ * 计算并格式化时间范围文本
+ */
+private fun calculateTimeRangeText(startMillis: Long, endMillis: Long): String {
+    val durationMillis = endMillis - startMillis
+    val hours = durationMillis / (1000 * 60 * 60)
+    val minutes = (durationMillis % (1000 * 60 * 60)) / (1000 * 60)
 
+    return when {
+        hours > 0 -> "约${hours}小时${if (minutes > 0) "${minutes}分钟" else ""}"
+        minutes > 0 -> "约${minutes}分钟"
+        else -> "不足1分钟"
+    }
+}
 /**
  * 调试函数：检查现有通话记录的SIM卡相关字段
  */
@@ -340,6 +352,11 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
     var startTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    // ========== 新增：截止时间状态 ==========
+    var endTimeMillis by remember { mutableLongStateOf(System.currentTimeMillis() + Constants.END_TIME_DEFAULT_OFFSET_HOURS * 60 * 60 * 1000) }
+    var enableEndTime by remember { mutableStateOf(false) } // 是否启用截止时间
+    var showEndDatePicker by remember { mutableStateOf(false) }
+    var showEndTimePicker by remember { mutableStateOf(false) }
 
     // 定义四个时间范围选项（包括自定义）
     val timeRanges = remember {
@@ -382,6 +399,13 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
 
     val displayTime = remember(startTimeMillis) {
         val instant = Instant.ofEpochMilli(startTimeMillis)
+        val localDateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime()
+        localDateTime.format(dateTimeFormatter)
+    }
+
+    // ========== 新增：截止时间格式化显示 ==========
+    val displayEndTime = remember(endTimeMillis) {
+        val instant = Instant.ofEpochMilli(endTimeMillis)
         val localDateTime = instant.atZone(ZoneId.systemDefault()).toLocalDateTime()
         localDateTime.format(dateTimeFormatter)
     }
@@ -491,7 +515,70 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                         Text(Constants.TIME_BUTTON_TEXT)
                     }
                 }
+// ========== 新增：截止时间选择区域 ==========
+                Spacer(modifier = Modifier.height(16.dp))
 
+// 是否启用截止时间的复选框
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = enableEndTime,
+                        onCheckedChange = { checked ->
+                            enableEndTime = checked
+                            if (checked && endTimeMillis <= startTimeMillis) {
+                                // 如果启用但时间无效，自动调整为起始时间后1小时
+                                endTimeMillis = startTimeMillis + 60 * 60 * 1000
+                            }
+                        }
+                    )
+                    Text(
+                        text = Constants.END_TIME_CHECKBOX_LABEL,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                }
+
+// 当启用截止时间时显示时间选择器
+                if (enableEndTime) {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 截止时间显示
+                    Text(
+                        text = "${Constants.END_TIME_LABEL}$displayEndTime",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = { showEndDatePicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("选择截止日期")
+                        }
+                        FilledTonalButton(
+                            onClick = { showEndTimePicker = true },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("选择截止时间")
+                        }
+                    }
+
+                    // 时间范围验证提示
+                    if (endTimeMillis <= startTimeMillis) {
+                        Text(
+                            text = Constants.TIME_RANGE_ERROR,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 通话时长选择 - 下拉框（基于类型属性决定是否显示）
@@ -815,7 +902,11 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
         androidx.compose.material3.Button(
             onClick = {
                 Log.d("CallLogGeneratorApp", "Generate button clicked.")
-                
+                // ========== 新增：截止时间验证 ==========
+                if (enableEndTime && endTimeMillis <= startTimeMillis) {
+                    message = "⚠️ 截止时间必须晚于起始时间"
+                    return@Button
+                }
                 // 防御性编程：验证UI状态
                 val validationResult = callTypeUIState.validateCurrentState()
                 if (!validationResult.isValid) {
@@ -1013,6 +1104,19 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    // ========== 新增：显示截止时间信息 ==========
+                    if (enableEndTime) {
+                        Text(
+                            text = "• 截止时间: $displayEndTime",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = "• 时间范围: ${calculateTimeRangeText(startTimeMillis, endTimeMillis)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                     Text(
                         text = if (callTypeUIState.selectedTimeRangeIndex == 3) {
                             "• 通话时长: ${selectedRange.name} (${callTypeUIState.customMinDuration}-${callTypeUIState.customMaxDuration}秒)"
@@ -1058,10 +1162,44 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
 
                             var successCount = 0
                             // 使用起始时间作为第一条记录的时间
-                            var currentTime = startTimeMillis
+                            // ========== 修改：支持截止时间的时间计算逻辑 ==========
+                            val totalRecords = phoneNumbers.size
+                            val timeRangeMillis = if (enableEndTime && endTimeMillis > startTimeMillis) {
+                                endTimeMillis - startTimeMillis
+                            } else {
+                                0L
+                            }
 
-                            Log.d("CallLogGeneratorApp", "Starting loop to generate ${phoneNumbers.size} call logs.")
-                            phoneNumbers.forEach { phoneNumber ->
+                            // 计算均匀分布的时间步长（如果启用了截止时间）
+                            val uniformStep = if (enableEndTime && timeRangeMillis > 0 && totalRecords > 0) {
+                                timeRangeMillis / totalRecords
+                            } else {
+                                0L
+                            }
+
+                            // 使用起始时间作为第一条记录的时间基准
+                            var currentTime = startTimeMillis
+                            var lastRecordEndTime = startTimeMillis
+
+                            Log.d("CallLogGeneratorApp", "Starting loop to generate $totalRecords call logs." +
+                                    (if (enableEndTime) " Time range: ${timeRangeMillis / 1000 / 60} minutes, Step: ${uniformStep / 1000} seconds" else ""))
+
+                            phoneNumbers.forEachIndexed { index, phoneNumber ->
+                                // 如果启用了截止时间，计算均匀分布的时间点（添加±15%的随机偏移使其更自然）
+                                if (enableEndTime && uniformStep > 0) {
+                                    val baseTime = startTimeMillis + (index * uniformStep)
+                                    val randomOffset = Random.nextLong(-uniformStep / 6, uniformStep / 6) // ±15%偏移
+                                    currentTime = baseTime + randomOffset
+
+                                    // 确保在有效时间范围内
+                                    currentTime = currentTime.coerceIn(startTimeMillis, endTimeMillis - 60 * 1000) // 预留1分钟缓冲
+
+                                    // 确保时间递增（不早于上一条记录的结束时间）
+                                    if (currentTime < lastRecordEndTime + 30 * 1000) { // 至少间隔30秒
+                                        currentTime = lastRecordEndTime + 30 * 1000
+                                    }
+                                }
+
                                 // 使用CallTypeUIState计算最终时长
                                 val duration = callTypeUIState.calculateFinalDuration(selectedRange)
 
@@ -1091,7 +1229,7 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                                         Log.w("CallLogInsert", "SIM卡字段设置失败: ${e.message}")
                                         false
                                     }
-                                    
+
                                     // 如果SIM卡字段设置失败，尝试设置最基本的标准字段
                                     if (!simFieldsResult) {
                                         val basicFieldsResult = try {
@@ -1103,7 +1241,7 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                                             Log.w("CallLogInsert", "基本字段设置也失败: ${e.message}")
                                             false
                                         }
-                                        
+
                                         if (!basicFieldsResult) {
                                             Log.w("CallLogInsert", "将生成不包含SIM信息的通话记录")
                                         }
@@ -1112,23 +1250,31 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
 
                                 contentResolver.insert(Constants.CALL_LOG_URI.toUri(), values)
                                 successCount++
-                                Log.d("CallLogGeneratorApp", "Successfully inserted log for $phoneNumber ($successCount/${phoneNumbers.size})")
+                                Log.d("CallLogGeneratorApp", "Successfully inserted log for $phoneNumber ($successCount/$totalRecords at ${currentTime})")
 
-                                // 更新时间：当前通话结束时间 + 随机间隔（40~120秒），确保时间不溢出
-                                val randomInterval = Random.nextInt(Constants.CALL_INTERVAL_MIN, Constants.CALL_INTERVAL_MAX + 1) * Constants.MILLISECONDS_PER_SECOND
+                                // ========== 修改：时间更新逻辑 ==========
                                 val durationMs = duration * 1000L
-                                
-                                // 检查时间计算是否会溢出
-                                val maxSafeTime = Long.MAX_VALUE - randomInterval - durationMs
-                                if (currentTime <= maxSafeTime) {
-                                    currentTime += durationMs + randomInterval
+
+                                if (enableEndTime) {
+                                    // 启用了截止时间：记录本条结束时间，用于下一条的时间检查
+                                    lastRecordEndTime = currentTime + durationMs
                                 } else {
-                                    // 防止溢出，设置一个合理的最大时间（当前时间 + 1年）
-                                    val oneYearMs = 365L * 24 * 60 * 60 * 1000
-                                    currentTime = minOf(currentTime + durationMs + randomInterval, System.currentTimeMillis() + oneYearMs)
-                                    Log.w("CallLogGeneratorApp", "时间计算可能溢出，使用安全时间值: $currentTime")
+                                    // 未启用截止时间：使用原有随机间隔逻辑
+                                    val randomInterval = Random.nextInt(Constants.CALL_INTERVAL_MIN, Constants.CALL_INTERVAL_MAX + 1) * Constants.MILLISECONDS_PER_SECOND
+
+                                    // 检查时间计算是否会溢出
+                                    val maxSafeTime = Long.MAX_VALUE - randomInterval - durationMs
+                                    if (currentTime <= maxSafeTime) {
+                                        currentTime += durationMs + randomInterval
+                                    } else {
+                                        // 防止溢出，设置一个合理的最大时间（当前时间 + 1年）
+                                        val oneYearMs = 365L * 24 * 60 * 60 * 1000
+                                        currentTime = minOf(currentTime + durationMs + randomInterval, System.currentTimeMillis() + oneYearMs)
+                                        Log.w("CallLogGeneratorApp", "时间计算可能溢出，使用安全时间值: $currentTime")
+                                    }
                                 }
                             }
+                            // =========================================
 
                             message = String.format(Constants.SUCCESS_GENERATION, successCount)
                             Log.i("CallLogGeneratorApp", "Finished generation. Success count: $successCount")
@@ -1252,6 +1398,102 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
             }
         )
     }
+    // ========== 新增：截止时间日期选择器 ==========
+    if (showEndDatePicker) {
+        val endDatePickerState = rememberDatePickerState(
+            initialSelectedDateMillis = endTimeMillis
+        )
+
+        DatePickerDialog(
+            onDismissRequest = { showEndDatePicker = false },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        endDatePickerState.selectedDateMillis?.let { selectedDate ->
+                            // 只更新日期部分，保留当前时间部分
+                            val currentEndInstant = Instant.ofEpochMilli(endTimeMillis)
+                            val selectedInstant = Instant.ofEpochMilli(selectedDate)
+
+                            val newInstant = selectedInstant.atZone(ZoneId.systemDefault())
+                                .withHour(currentEndInstant.atZone(ZoneId.systemDefault()).hour)
+                                .withMinute(currentEndInstant.atZone(ZoneId.systemDefault()).minute)
+                                .withSecond(currentEndInstant.atZone(ZoneId.systemDefault()).second)
+                                .toInstant()
+
+                            endTimeMillis = newInstant.toEpochMilli()
+
+                            // 验证时间范围
+                            if (enableEndTime && endTimeMillis <= startTimeMillis) {
+                                // 自动调整为起始时间后1小时，确保合理性
+                                endTimeMillis = startTimeMillis + 60 * 60 * 1000
+                            }
+                        }
+                        showEndDatePicker = false
+                    }
+                ) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showEndDatePicker = false }) {
+                    Text("取消")
+                }
+            }
+        ) {
+            DatePicker(state = endDatePickerState)
+        }
+    }
+// ========== 新增：截止时间时间选择器 ==========
+    if (showEndTimePicker) {
+        val currentEndTime = Instant.ofEpochMilli(endTimeMillis)
+            .atZone(ZoneId.systemDefault())
+            .toLocalTime()
+
+        val endTimePickerState = rememberTimePickerState(
+            initialHour = currentEndTime.hour,
+            initialMinute = currentEndTime.minute
+        )
+
+        AlertDialog(
+            onDismissRequest = { showEndTimePicker = false },
+            title = {
+                Text("选择截止时间", style = MaterialTheme.typography.headlineSmall)
+            },
+            text = {
+                TimePicker(state = endTimePickerState)
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val currentEndInstant = Instant.ofEpochMilli(endTimeMillis)
+                        val localEndDate = currentEndInstant.atZone(ZoneId.systemDefault()).toLocalDate()
+
+                        val newInstant = localEndDate.atTime(endTimePickerState.hour, endTimePickerState.minute)
+                            .atZone(ZoneId.systemDefault())
+                            .toInstant()
+
+                        endTimeMillis = newInstant.toEpochMilli()
+
+                        // 验证时间范围
+                        if (enableEndTime && endTimeMillis <= startTimeMillis) {
+                            // 自动调整为起始时间后1小时
+                            endTimeMillis = startTimeMillis + 60 * 60 * 1000
+                        }
+
+                        showEndTimePicker = false
+                    }
+                ) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showEndTimePicker = false }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     // 更新选项对话框（先让用户选择是否包含pre-release）
     if (showUpdateOptions) {
         AlertDialog(
@@ -1677,7 +1919,7 @@ private fun MainActivity.checkForUpdate(
 @Preview(showBackground = true)
 fun CallLogGeneratorAppPreview() {
     CallLogGenerationTheme {
-        CallLogGeneratorApp(contentResolver = LocalContext.current.contentResolver) { callback -> 
+        CallLogGeneratorApp(contentResolver = LocalContext.current.contentResolver) { callback ->
             callback(true)
             true
         }

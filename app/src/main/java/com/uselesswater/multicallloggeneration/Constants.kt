@@ -52,6 +52,14 @@ object Constants {
     const val START_TIME_LABEL = "起始时间："
     const val DATE_BUTTON_TEXT = "选择日期"
     const val TIME_BUTTON_TEXT = "选择时间"
+
+    const val END_TIME_LABEL = "截止时间: "
+
+    const val END_TIME_CHECKBOX_LABEL = "设置截止时间（可选）"
+
+    const val END_TIME_DEFAULT_OFFSET_HOURS = 1L // 默认截止时间为起始时间后24小时
+
+    const val TIME_RANGE_ERROR = "⚠️ 截止时间必须晚于起始时间"
     const val CALL_DURATION_LABEL = "通话时长："
     const val SIM_SELECTION_TITLE = "SIM卡选择"
     const val GENERATE_BUTTON_TEXT = "🚀 批量生成通话记录"
