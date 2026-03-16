@@ -1,5 +1,6 @@
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
@@ -15,10 +16,26 @@ android {
         applicationId = "com.uselesswater.multicallloggeneration"
         minSdk = 22
         targetSdk = 34
-        versionCode = 3
+        versionCode = 1
         versionName = "1.0.0"
-
+        // 添加多dex支持（如果方法数过多）
+        multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+// 读取local.properties
+    val localProperties = Properties().apply {
+        file("../local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    }
+
+    signingConfigs {
+        create("release") {
+            storePassword = localProperties.getProperty("keystore.password") ?: ""
+            keyPassword = localProperties.getProperty("key.password") ?: ""
+            storeFile = file("app/keystore")
+            keyAlias = "calllog"
+            enableV1Signing = true
+            enableV2Signing = true
+        }
     }
 
     buildTypes {
@@ -94,7 +111,8 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.logging.interceptor)
     implementation(libs.androidx.junit.ktx)
-
+    implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
@@ -104,4 +122,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
 }

@@ -76,9 +76,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Face
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.Divider
-
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 
 class MainActivity : ComponentActivity() {
 
@@ -445,34 +449,85 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
 
         // 电话号码输入区域
         androidx.compose.material3.Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 20.dp),
-            colors = androidx.compose.material3.CardDefaults.cardColors(
-               // containerColor = MaterialTheme.colorScheme.surfaceVariant
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-            )
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = Constants.PHONE_NUMBER_POOL_TITLE,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 20.dp),
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
                 )
-                
-                OutlinedTextField(
-                    value = phoneNumbersText,
-                    onValueChange = { phoneNumbersText = it },
-                    label = { Text(Constants.PHONE_NUMBER_LABEL) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    placeholder = { Text(Constants.PHONE_NUMBER_PLACEHOLDER) },
-                    shape = MaterialTheme.shapes.medium
-                )
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    // 标题行：左侧标题，右侧AI识别按钮
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = Constants.PHONE_NUMBER_POOL_TITLE,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        // ========== 豆包AI识别按钮 ==========
+                        var showDoubaoOcr by remember { mutableStateOf(false) }
+
+                        Button(
+                            onClick = { showDoubaoOcr = true },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Face,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("AI识别")
+                        }
+
+                        if (showDoubaoOcr) {
+                            DoubaoOcrDialog(
+                                onDismiss = { showDoubaoOcr = false },
+                                onNumbersSelected = { nums ->
+                                    // 合并到现有号码
+                                    val existing = phoneNumbersText
+                                        .split("\n", " ", ",", "，")
+                                        .map { it.trim() }
+                                        .filter { it.length == 11 && it.matches(Regex("\\d{11}")) }
+
+                                    val merged = (existing + nums).distinct()
+                                    phoneNumbersText = merged.joinToString("\n")
+
+                                    showDoubaoOcr = false
+
+                                    // 成功提示
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "✅ 识别成功，添加 ${nums.size} 个号码",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        }
+                        // ====================================
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = phoneNumbersText,
+                        onValueChange = { phoneNumbersText = it },
+                        label = { Text(Constants.PHONE_NUMBER_LABEL) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        placeholder = { Text(Constants.PHONE_NUMBER_PLACEHOLDER) },
+                        shape = MaterialTheme.shapes.medium
+                    )
+                }
             }
-        }
 
         // 时间设置区域
         androidx.compose.material3.Card(
