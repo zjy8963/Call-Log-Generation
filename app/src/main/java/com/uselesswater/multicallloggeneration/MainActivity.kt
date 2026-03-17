@@ -83,6 +83,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import com.uselesswater.multicallloggeneration.BaiduOcrManager
 class MainActivity : ComponentActivity() {
 
     private var permissionCallback: ((Boolean) -> Unit)? = null

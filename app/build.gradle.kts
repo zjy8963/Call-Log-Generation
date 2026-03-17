@@ -14,15 +14,36 @@ android {
 
     defaultConfig {
         applicationId = "com.uselesswater.multicallloggeneration"
-        minSdk = 22
+        minSdk = 23
         targetSdk = 34
         versionCode = 1
-        versionName = "1.1.0"
+        versionName = "3.1.2"
         // 添加多dex支持（如果方法数过多）
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        // ========== 新增：从 local.properties 读取 API 密钥并生成 BuildConfig ==========
+        val localProperties = Properties().apply {
+            file("../local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+        }
+
+        // 豆包配置
+        val doubaoApiKey = localProperties.getProperty("DOUBAO_API_KEY", "")
+        val doubaoEndpointId = localProperties.getProperty("DOUBAO_ENDPOINT_ID", "")
+
+        // 百度配置
+        val baiduApiKey = localProperties.getProperty("BAIDU_API_KEY", "")
+        val baiduSecretKey = localProperties.getProperty("BAIDU_SECRET_KEY", "")
+
+        // 生成 BuildConfig 字段
+        buildConfigField("String", "DOUBAO_API_KEY", "\"$doubaoApiKey\"")
+        buildConfigField("String", "DOUBAO_ENDPOINT_ID", "\"$doubaoEndpointId\"")
+        buildConfigField("String", "BAIDU_API_KEY", "\"$baiduApiKey\"")
+        buildConfigField("String", "BAIDU_SECRET_KEY", "\"$baiduSecretKey\"")
+        // =================================================================================
     }
-// 读取local.properties
+
+    // 读取local.properties（用于签名配置）
     val localProperties = Properties().apply {
         file("../local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
     }
@@ -62,6 +83,9 @@ android {
     }
     buildFeatures {
         compose = true
+        // ========== 新增：启用 BuildConfig 功能 ==========
+        buildConfig = true
+        // ================================================
     }
 
     testOptions {
@@ -119,6 +143,8 @@ dependencies {
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation(libs.androidx.compose.ui.graphics)
+    implementation(libs.androidx.exifinterface)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

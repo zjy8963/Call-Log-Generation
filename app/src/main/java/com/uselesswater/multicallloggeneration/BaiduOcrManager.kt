@@ -14,28 +14,31 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import androidx.exifinterface.media.ExifInterface  // 新增：用于读取 EXIF 旋转信息
-import androidx.compose.ui.graphics.Matrix
-import androidx.core.graphics.scale
+import java.net.URLEncoder
+import android.media.ExifInterface
 
 /**
- * 豆包/火山引擎OCR管理器 - OpenAI兼容格式
+ * 百度OCR管理器 - 作为豆包OCR的兜底方案
+ * 使用百度通用文字识别（高精度版）API
  */
-object DoubaoOcrManager {
+object BaiduOcrManager {
 
-    private const val TAG = "DoubaoOcrManager"
+    private const val TAG = "BaiduOcrManager"
 
     // ==================== 配置区域（必须修改）====================
-    // API Key：在火山引擎控制台 "API Key管理" 创建
-    private val API_KEY = BuildConfig.DOUBAO_API_KEY
+    // API Key 和 Secret Key：在百度智能云控制台创建应用后获取
+    private val API_KEY = BuildConfig.BAIDU_API_KEY
+    private const val SECRET_KEY = BuildConfig.BAIDU_SECRET_KEY
 
-    // 接入点ID：在火山引擎控制台 "在线推理" 创建的接入点ID
-    // 格式如：ep-20240101-abcdefgh 或 doubao-vision-lite-4k-xxx
-    private val ENDPOINT_ID = BuildConfig.DOUBAO_ENDPOINT_ID
-
-    // API地址（北京节点）
-    private const val ENDPOINT = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
+    // 通用文字识别（高精度版）API地址
+    private const val OCR_API_URL = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic"
+    // 获取Access Token的地址
+    private const val TOKEN_URL = "https://aip.baidubce.com/oauth/2.0/token"
     // ============================================================
+
+    // 缓存access_token，避免频繁获取
+    private var cachedAccessToken: String? = null
+    private var tokenExpireTime: Long = 0
 
     /**
      * 识别图片中的手机号
@@ -43,33 +46,108 @@ object DoubaoOcrManager {
     @RequiresApi(Build.VERSION_CODES.N)
     suspend fun recognizePhoneNumbers(context: Context, imageUri: Uri): List<String> = withContext(Dispatchers.IO) {
         try {
-            Log.d(TAG, "开始处理图片...")
+            Log.d(TAG, "开始百度OCR处理图片...")
 
             val base64Image = compressImageToBase64(context, imageUri)
                 ?: return@withContext emptyList()
 
             Log.d(TAG, "图片编码完成，大小: ${base64Image.length} chars")
 
-            val response = callApi(base64Image)
+            val accessToken = getAccessToken()
+                ?: return@withContext emptyList()
+
+            val response = callBaiduOcrApi(base64Image, accessToken)
             parsePhoneNumbers(response)
 
         } catch (e: Exception) {
-            Log.e(TAG, "识别失败: ${e.message}", e)
+            Log.e(TAG, "百度OCR识别失败: ${e.message}", e)
             emptyList()
         }
     }
 
     /**
-     * 压缩图片并转为Base64
+     * 获取Access Token（带缓存机制）
      */
+    private suspend fun getAccessToken(): String? = withContext(Dispatchers.IO) {
+        // 检查缓存的token是否还有效（预留5分钟缓冲）
+        val currentTime = System.currentTimeMillis()
+        if (cachedAccessToken != null && currentTime < tokenExpireTime - 5 * 60 * 1000) {
+            Log.d(TAG, "使用缓存的AccessToken")
+            return@withContext cachedAccessToken
+        }
+
+        try {
+            val url = URL("$TOKEN_URL?grant_type=client_credentials&client_id=$API_KEY&client_secret=$SECRET_KEY")
+            val connection = url.openConnection() as HttpURLConnection
+
+            connection.apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 10000
+                readTimeout = 10000
+                setRequestProperty("Content-Type", "application/json")
+            }
+
+            val responseCode = connection.responseCode
+            val response = if (responseCode == 200) {
+                connection.inputStream.bufferedReader().use { it.readText() }
+            } else {
+                val error = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                throw Exception("获取Token失败 HTTP $responseCode: $error")
+            }
+
+            val json = JSONObject(response)
+            val accessToken = json.getString("access_token")
+            val expiresIn = json.getLong("expires_in") // 通常是2592000秒（30天）
+
+            // 缓存token
+            cachedAccessToken = accessToken
+            tokenExpireTime = currentTime + expiresIn * 1000
+
+            Log.d(TAG, "获取AccessToken成功，有效期${expiresIn}秒")
+            accessToken
+
+        } catch (e: Exception) {
+            Log.e(TAG, "获取AccessToken失败: ${e.message}", e)
+            null
+        }
+    }
+
     /**
-     * 压缩图片并转为Base64（修复版：支持相机照片的EXIF旋转）
+     * 调用百度OCR API
      */
+    private fun callBaiduOcrApi(base64Image: String, accessToken: String): String {
+        val url = URL("$OCR_API_URL?access_token=$accessToken")
+        val connection = url.openConnection() as HttpURLConnection
+
+        connection.apply {
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = 30000
+            readTimeout = 30000
+            setRequestProperty("Content-Type", "application/x-www-form-urlencoded")
+        }
+
+        // 对base64图片进行URL编码
+        val encodedImage = URLEncoder.encode(base64Image, "UTF-8")
+        val params = "image=$encodedImage"
+
+        connection.outputStream.use { it.write(params.toByteArray()) }
+
+        val responseCode = connection.responseCode
+        val response = if (responseCode == 200) {
+            connection.inputStream.bufferedReader().use { it.readText() }
+        } else {
+            val error = connection.errorStream?.bufferedReader()?.use { it.readText() }
+            throw Exception("百度OCR API错误 HTTP $responseCode: $error")
+        }
+
+        Log.d(TAG, "百度OCR响应: ${response.take(200)}...")
+        return response
+    }
+
     /**
-     * 压缩图片并转为Base64（修复相机照片旋转问题）
-     */
-    /**
-     * 压缩图片并转为Base64（修复相机照片旋转问题）
+     * 压缩图片并转为Base64（参考DoubaoOcrManager的实现）
      */
     @RequiresApi(Build.VERSION_CODES.N)
     private fun compressImageToBase64(context: Context, uri: Uri, maxSize: Int = 1024): String? {
@@ -89,7 +167,7 @@ object DoubaoOcrManager {
                 android.graphics.BitmapFactory.decodeStream(stream, null, options)
             }
 
-            // 计算 inSampleSize（同时考虑宽高）
+            // 计算 inSampleSize
             val widthScale = options.outWidth / maxSize
             val heightScale = options.outHeight / maxSize
             val scale = if (widthScale > heightScale) widthScale else heightScale
@@ -114,10 +192,9 @@ object DoubaoOcrManager {
                 return null
             }
 
-            // 应用旋转（关键修复：使用完全限定名）
+            // 应用旋转
             if (rotation != 0) {
                 val matrix = android.graphics.Matrix()
-                // 使用 setRotate 设置旋转角度
                 matrix.setRotate(rotation.toFloat())
 
                 rotatedBitmap = android.graphics.Bitmap.createBitmap(
@@ -150,12 +227,18 @@ object DoubaoOcrManager {
                 rotatedBitmap.recycle()
             }
 
-            // 压缩为 JPEG
+            // 压缩为 JPEG（百度要求base64编码后不超过4M）
             val outputStream = java.io.ByteArrayOutputStream()
             val quality = if (finalBitmap!!.width > 512) 80 else 85
             finalBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, outputStream)
             val bytes = outputStream.toByteArray()
             finalBitmap.recycle()
+
+            // 检查大小是否符合要求（百度要求base64后不超过4M，原始图片建议不超过3M）
+            if (bytes.size > 3 * 1024 * 1024) {
+                Log.w(TAG, "图片过大: ${bytes.size / 1024}KB，尝试进一步压缩")
+                // 可以在这里添加二次压缩逻辑
+            }
 
             Log.d(TAG, "最终图片: ${bytes.size / 1024}KB")
             return android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
@@ -206,95 +289,37 @@ object DoubaoOcrManager {
     }
 
     /**
-     * 调用火山引擎API
-     */
-    private fun callApi(base64Image: String): String {
-        val url = URL(ENDPOINT)
-        val connection = url.openConnection() as HttpURLConnection
-
-        connection.apply {
-            requestMethod = "POST"
-            doOutput = true
-            connectTimeout = 60000
-            readTimeout = 60000
-            setRequestProperty("Content-Type", "application/json")
-            setRequestProperty("Authorization", "Bearer $API_KEY")
-        }
-
-        val requestBody = buildJsonRequest(base64Image)
-        connection.outputStream.use { it.write(requestBody.toByteArray()) }
-
-        val responseCode = connection.responseCode
-        val response = if (responseCode == 200) {
-            connection.inputStream.bufferedReader().use { it.readText() }
-        } else {
-            val error = connection.errorStream?.bufferedReader()?.use { it.readText() }
-            throw Exception("HTTP $responseCode: $error")
-        }
-
-        Log.d(TAG, "API响应: ${response.take(200)}...")
-        return response
-    }
-
-    /**
-     * 构建JSON请求体
-     */
-    private fun buildJsonRequest(base64Image: String): String {
-        val json = JSONObject().apply {
-            // ========== 关键修复：使用 model 字段传入接入点ID ==========
-            put("model", ENDPOINT_ID)
-            // =========================================================
-
-            put("temperature", 0.1)
-            put("max_tokens", 500)
-
-            put("messages", org.json.JSONArray().apply {
-                put(JSONObject().apply {
-                    put("role", "system")
-                    put("content", "你是一个专门提取手机号的助手。请从图片中提取所有有效的中国大陆手机号（11位数字，1开头）。只返回手机号，每行一个，不要任何其他文字。如果没有找到，返回\"无\"。")
-                })
-
-                put(JSONObject().apply {
-                    put("role", "user")
-                    put("content", org.json.JSONArray().apply {
-                        put(JSONObject().apply {
-                            put("type", "image_url")
-                            put("image_url", JSONObject().apply {
-                                put("url", "data:image/jpeg;base64,$base64Image")
-                            })
-                        })
-                        put(JSONObject().apply {
-                            put("type", "text")
-                            put("text", "提取图片中的所有手机号")
-                        })
-                    })
-                })
-            })
-        }
-
-        return json.toString()
-    }
-
-    /**
      * 解析响应提取手机号
      */
     private fun parsePhoneNumbers(response: String): List<String> {
         return try {
             val json = JSONObject(response)
-            val choices = json.getJSONArray("choices")
 
-            if (choices.length() == 0) return emptyList()
+            // 检查错误码
+            if (json.has("error_code")) {
+                val errorCode = json.getInt("error_code")
+                if (errorCode != 0) {
+                    val errorMsg = json.optString("error_msg", "未知错误")
+                    Log.e(TAG, "百度OCR返回错误: $errorCode - $errorMsg")
+                    return emptyList()
+                }
+            }
 
-            val content = choices.getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content")
+            val wordsResults = json.getJSONArray("words_result")
+            val allText = StringBuilder()
 
-            Log.d(TAG, "AI返回: $content")
+            for (i in 0 until wordsResults.length()) {
+                val words = wordsResults.getJSONObject(i).getString("words")
+                allText.append(words).append(" ")
+            }
 
-            extractPhoneNumbers(content)
+            val fullText = allText.toString()
+            Log.d(TAG, "百度OCR识别文本: $fullText")
+
+            extractPhoneNumbers(fullText)
 
         } catch (e: Exception) {
-            Log.e(TAG, "解析失败", e)
+            Log.e(TAG, "解析百度OCR响应失败", e)
             emptyList()
         }
     }

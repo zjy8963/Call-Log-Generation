@@ -3,8 +3,11 @@ package com.uselesswater.multicallloggeneration
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,9 +26,15 @@ import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
 
+enum class OcrEngine(val displayName: String, val description: String) {
+    AUTO("自动识别", "优先豆包，失败时用百度兜底"),
+    DOUBAO("豆包AI", "仅使用豆包AI识别"),
+    BAIDU("百度OCR", "仅使用百度OCR识别")
+}
 /**
  * 豆包AI OCR识别对话框
  */
+@RequiresApi(Build.VERSION_CODES.N)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DoubaoOcrDialog(
@@ -40,6 +49,7 @@ fun DoubaoOcrDialog(
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    var selectedEngine by remember { mutableStateOf(OcrEngine.AUTO) } // AUTO, DOUBAO, BAIDU
 
     val pickImage = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
@@ -136,6 +146,52 @@ fun DoubaoOcrDialog(
                         }
                     }
                 } else {
+                    // 在图片显示前添加引擎选择
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    var engineExpanded by remember { mutableStateOf(false) }
+
+                    ExposedDropdownMenuBox(
+                        expanded = engineExpanded,
+                        onExpandedChange = { engineExpanded = !engineExpanded }
+                    ) {
+                        OutlinedTextField(
+                            value = selectedEngine.displayName,
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("识别引擎") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = engineExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
+                            supportingText = { Text(selectedEngine.description) }
+                        )
+
+                        ExposedDropdownMenu(
+                            expanded = engineExpanded,
+                            onDismissRequest = { engineExpanded = false }
+                        ) {
+                            OcrEngine.entries.forEach { engine ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Column {
+                                            Text(engine.displayName)
+                                            Text(
+                                                engine.description,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedEngine = engine
+                                        engineExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -165,19 +221,40 @@ fun DoubaoOcrDialog(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (numbers.isEmpty() && !loading) {
+// ========== 修改：支持豆包+百度双引擎识别（百度兜底） ==========
                         Button(
                             onClick = {
                                 scope.launch {
                                     loading = true
                                     error = null
 
-                                    val result = DoubaoOcrManager.recognizePhoneNumbers(context, imageUri!!)
+                                    val result = when (selectedEngine) {
+                                        OcrEngine.AUTO -> {
+                                            // 自动模式：豆包优先，百度兜底
+                                            Log.d("DoubaoOcrDialog", "[自动模式] 尝试豆包AI...")
+                                            var doubaoResult = DoubaoOcrManager.recognizePhoneNumbers(context, imageUri!!)
+
+                                            if (doubaoResult.isEmpty()) {
+                                                Log.d("DoubaoOcrDialog", "[自动模式] 豆包失败，尝试百度OCR...")
+                                                doubaoResult = BaiduOcrManager.recognizePhoneNumbers(context, imageUri!!)
+                                            }
+                                            doubaoResult
+                                        }
+                                        OcrEngine.DOUBAO -> {
+                                            Log.d("DoubaoOcrDialog", "[豆包模式] 仅使用豆包AI...")
+                                            DoubaoOcrManager.recognizePhoneNumbers(context, imageUri!!)
+                                        }
+                                        OcrEngine.BAIDU -> {
+                                            Log.d("DoubaoOcrDialog", "[百度模式] 仅使用百度OCR...")
+                                            BaiduOcrManager.recognizePhoneNumbers(context, imageUri!!)
+                                        }
+                                    }
 
                                     if (result.isNotEmpty()) {
                                         numbers = result
                                         selected = result.toSet()
                                     } else {
-                                        error = "未识别到手机号，请确保图片清晰"
+                                        error = "未识别到手机号，请确保图片清晰且包含有效号码"
                                     }
 
                                     loading = false
@@ -187,8 +264,15 @@ fun DoubaoOcrDialog(
                         ) {
                             Icon(Icons.Default.Send, null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("开始识别")
+                            Text(
+                                when (selectedEngine) {
+                                    OcrEngine.AUTO -> "开始识别 (自动)"
+                                    OcrEngine.DOUBAO -> "开始识别 (豆包)"
+                                    OcrEngine.BAIDU -> "开始识别 (百度)"
+                                }
+                            )
                         }
+// ================================================================
                     }
 
                     if (loading) {
