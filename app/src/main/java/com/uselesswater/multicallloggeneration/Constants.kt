@@ -64,7 +64,7 @@ object Constants {
     const val SIM_SELECTION_TITLE = "SIM卡选择"
     const val GENERATE_BUTTON_TEXT = "🚀 批量生成通话记录"
 
-    //const val CHECK_UPDATE_BUTTON_TEXT = "🔄 检查更新"
+    const val CHECK_UPDATE_BUTTON_TEXT = "🔄 检查更新"
     const val AUTHOR_INFO = "Love 空中的裤头·李~"
     
     // 错误和成功消息

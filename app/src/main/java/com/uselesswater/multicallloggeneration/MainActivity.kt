@@ -83,7 +83,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-
 class MainActivity : ComponentActivity() {
 
     private var permissionCallback: ((Boolean) -> Unit)? = null
@@ -1025,7 +1024,7 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
         }
 
         // 设置按钮
-        /*FilledTonalButton(
+        FilledTonalButton(
             onClick = {
                 // 先显示更新选项对话框
                 showUpdateOptions = true
@@ -1034,8 +1033,8 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                 .fillMaxWidth()
                 .padding(vertical = 8.dp)
         ) {
-            //Text(Constants.CHECK_UPDATE_BUTTON_TEXT)
-        }*/
+            Text(Constants.CHECK_UPDATE_BUTTON_TEXT)
+        }
 
         // 作者信息
         Text(

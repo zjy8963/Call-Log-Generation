@@ -20,8 +20,8 @@ class UpdateChecker(private val context: Context) {
         
         // Gitee API地址
         private const val GITEE_API_BASE = "https://gitee.com/api/v5/repos"
-        private const val REPO_OWNER = "uselesswater"
-        private const val REPO_NAME = "CallLogGeneration"
+        private const val REPO_OWNER = "zjy8963"
+        private const val REPO_NAME = "Call-Log-Generation"
         
         // 更新配置
         var includePreReleases = mutableStateOf(false)
