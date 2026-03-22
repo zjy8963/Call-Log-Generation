@@ -285,7 +285,7 @@ fun PhoneNumberGeneratorDialog(
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Default.AccountBox,
+                    imageVector = Icons.Default.Refresh,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -305,6 +305,7 @@ fun PhoneNumberGeneratorDialog(
                 }
             } else if (showPreview && generatedNumbers.isNotEmpty()) {
                 // 预览界面
+                @OptIn(ExperimentalLayoutApi::class)
                 GeneratedNumbersPreview(
                     numbers = generatedNumbers,
                     onConfirm = {
@@ -826,6 +827,7 @@ private fun GeneratedNumbersPreview(
 
         // 统计信息
         val stats = numbers.groupBy { it.source }.mapValues { it.value.size }
+        @OptIn(ExperimentalLayoutApi::class)
         FlowRow(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)

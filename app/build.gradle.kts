@@ -17,7 +17,7 @@ android {
         minSdk = 23
         targetSdk = 34
         versionCode = 1
-        versionName = "3.1.2"
+        versionName = "3.1.3"
         // 添加多dex支持（如果方法数过多）
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -157,5 +157,6 @@ dependencies {
     // CSV解析（如果需要用更专业的库，可选）
     implementation("org.apache.commons:commons-csv:1.10.0")
     implementation("com.google.android.gms:play-services-location:21.0.1")
-
+    implementation("androidx.fragment:fragment-ktx:1.6.2")
+    implementation("androidx.activity:activity-compose:1.8.2")
 }
