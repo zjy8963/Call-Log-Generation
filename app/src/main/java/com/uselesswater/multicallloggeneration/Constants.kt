@@ -29,7 +29,7 @@ object Constants {
     const val TIME_RANGE_MEDIUM_MIN = 30
     const val TIME_RANGE_MEDIUM_MAX = 60
     const val TIME_RANGE_LONG_MIN = 60
-    const val TIME_RANGE_LONG_MAX = 300
+    const val TIME_RANGE_LONG_MAX = 3000
     const val TIME_RANGE_CUSTOM_MIN = 1
     const val TIME_RANGE_CUSTOM_MAX = 300
     const val TIME_RANGE_SHORT_NAME = "1秒-30秒"

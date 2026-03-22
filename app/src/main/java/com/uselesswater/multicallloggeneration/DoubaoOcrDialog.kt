@@ -21,18 +21,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat  // ========== 添加这行 ==========
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import kotlinx.coroutines.launch
+import java.io.File
 
 enum class OcrEngine(val displayName: String, val description: String) {
     AUTO("自动识别", "优先豆包，失败时用百度兜底"),
     DOUBAO("豆包AI", "仅使用豆包AI识别"),
     BAIDU("百度OCR", "仅使用百度OCR识别")
 }
+
 /**
- * 豆包AI OCR识别对话框
+ * 豆包AI OCR识别对话框 - 修复相机旋转问题
  */
 @RequiresApi(Build.VERSION_CODES.N)
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,8 +52,25 @@ fun DoubaoOcrDialog(
     var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var selectedEngine by remember { mutableStateOf(OcrEngine.AUTO) } // AUTO, DOUBAO, BAIDU
+    var selectedEngine by remember { mutableStateOf(OcrEngine.AUTO) }
 
+    // ========== 修复：创建临时文件用于相机拍摄 ==========
+    val tempPhotoFile = remember {
+        File.createTempFile("camera_", ".jpg", context.cacheDir).apply {
+            deleteOnExit() // 确保退出时清理
+        }
+    }
+
+    val tempPhotoUri = remember {
+        FileProvider.getUriForFile(
+            context,
+            "${context.packageName}.fileprovider",
+            tempPhotoFile
+        )
+    }
+    // =====================================================
+
+    // 相册选择 - 保持不变
     val pickImage = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent()
     ) { uri ->
@@ -62,22 +82,28 @@ fun DoubaoOcrDialog(
         }
     }
 
+    // ========== 修复：使用 TakePicture 替代 TakePicturePreview ==========
     val takePhoto = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicturePreview()
-    ) { bitmap ->
-        bitmap?.let {
-            val uri = saveBitmapToTemp(context, it)
-            imageUri = uri
+        ActivityResultContracts.TakePicture()
+    ) { success ->
+        if (success) {
+            // 相机直接保存到文件，保留完整 EXIF 信息
+            imageUri = tempPhotoUri
             numbers = emptyList()
             selected = emptySet()
             error = null
+            Log.d("DoubaoOcrDialog", "相机拍摄成功，URI: $tempPhotoUri")
+        } else {
+            Log.w("DoubaoOcrDialog", "相机拍摄取消或失败")
         }
     }
+    // =====================================================
 
     val requestPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
-        if (granted) takePhoto.launch(null)
+        // ========== 修复：传入 URI 而不是 null ==========
+        if (granted) takePhoto.launch(tempPhotoUri)
     }
 
     AlertDialog(
@@ -124,29 +150,24 @@ fun DoubaoOcrDialog(
 
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Button(onClick = { pickImage.launch("image/*") }) {
-                                    //Icon(Icons.Default.ArrowDropDown, null)
-                                    Spacer(modifier = Modifier.width(3.dp))
                                     Text("相册")
                                 }
                                 Button(onClick = {
-                                    // ========== 修复：使用 ContextCompat 检查权限 ==========
                                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
                                         == PackageManager.PERMISSION_GRANTED) {
-                                        takePhoto.launch(null)
+                                        // ========== 修复：传入 URI ==========
+                                        takePhoto.launch(tempPhotoUri)
                                     } else {
                                         requestPermission.launch(Manifest.permission.CAMERA)
                                     }
-                                    // =====================================================
                                 }) {
-                                    //Icon(Icons.Default.Add, null)
-                                    Spacer(modifier = Modifier.width(3.dp))
                                     Text("拍照")
                                 }
                             }
                         }
                     }
                 } else {
-                    // 在图片显示前添加引擎选择
+                    // ... 其余代码保持不变 ...
                     Spacer(modifier = Modifier.height(8.dp))
 
                     var engineExpanded by remember { mutableStateOf(false) }
@@ -191,6 +212,8 @@ fun DoubaoOcrDialog(
                             }
                         }
                     }
+
+                    // 图片预览和识别逻辑保持不变...
                     Spacer(modifier = Modifier.height(8.dp))
                     Box(
                         modifier = Modifier
@@ -221,7 +244,6 @@ fun DoubaoOcrDialog(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (numbers.isEmpty() && !loading) {
-// ========== 修改：支持豆包+百度双引擎识别（百度兜底） ==========
                         Button(
                             onClick = {
                                 scope.launch {
@@ -230,7 +252,6 @@ fun DoubaoOcrDialog(
 
                                     val result = when (selectedEngine) {
                                         OcrEngine.AUTO -> {
-                                            // 自动模式：豆包优先，百度兜底
                                             Log.d("DoubaoOcrDialog", "[自动模式] 尝试豆包AI...")
                                             var doubaoResult = DoubaoOcrManager.recognizePhoneNumbers(context, imageUri!!)
 
@@ -272,7 +293,6 @@ fun DoubaoOcrDialog(
                                 }
                             )
                         }
-// ================================================================
                     }
 
                     if (loading) {
@@ -282,7 +302,7 @@ fun DoubaoOcrDialog(
                         ) {
                             CircularProgressIndicator()
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("豆包AI分析中...", style = MaterialTheme.typography.bodySmall)
+                            Text("AI分析中...", style = MaterialTheme.typography.bodySmall)
                         }
                     }
 
@@ -352,16 +372,15 @@ fun DoubaoOcrDialog(
             TextButton(onClick = onDismiss, enabled = !loading) { Text("取消") }
         }
     )
-}
 
-private fun saveBitmapToTemp(context: android.content.Context, bitmap: android.graphics.Bitmap): Uri {
-    val file = java.io.File.createTempFile("ocr_", ".jpg", context.cacheDir)
-    file.outputStream().use {
-        bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it)
+    // 清理临时文件
+    DisposableEffect(Unit) {
+        onDispose {
+            try {
+                tempPhotoFile.delete()
+            } catch (e: Exception) {
+                Log.w("DoubaoOcrDialog", "清理临时文件失败", e)
+            }
+        }
     }
-    return androidx.core.content.FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        file
-    )
 }

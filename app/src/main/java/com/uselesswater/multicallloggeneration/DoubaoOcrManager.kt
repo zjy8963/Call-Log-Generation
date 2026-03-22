@@ -1,22 +1,16 @@
 package com.uselesswater.multicallloggeneration
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
-import android.util.Base64
 import android.util.Log
 import androidx.annotation.RequiresApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
-import androidx.exifinterface.media.ExifInterface  // 新增：用于读取 EXIF 旋转信息
-import androidx.compose.ui.graphics.Matrix
-import androidx.core.graphics.scale
+
 
 /**
  * 豆包/火山引擎OCR管理器 - OpenAI兼容格式

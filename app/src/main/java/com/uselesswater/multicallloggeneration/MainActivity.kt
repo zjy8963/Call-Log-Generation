@@ -6,6 +6,7 @@ import android.content.ContentValues
 import android.content.Context
 import android.content.pm.PackageManager
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.provider.CallLog
 
@@ -15,6 +16,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -83,7 +85,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import com.uselesswater.multicallloggeneration.BaiduOcrManager
+
 class MainActivity : ComponentActivity() {
 
     private var permissionCallback: ((Boolean) -> Unit)? = null
@@ -103,6 +105,7 @@ class MainActivity : ComponentActivity() {
         permissionCallback = null
     }
 
+    @RequiresApi(Build.VERSION_CODES.N)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "onCreate: Activity created")
@@ -341,6 +344,7 @@ private fun getSubscriptionId(context: Context, simSlot: Int): Int {
 // 定义时间范围数据类
 data class TimeRange(val name: String, val minSeconds: Int, val maxSeconds: Int)
 
+@RequiresApi(Build.VERSION_CODES.N)
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1970,6 +1974,7 @@ private fun MainActivity.checkForUpdate(
 }
 
 // 预览函数
+@RequiresApi(Build.VERSION_CODES.N)
 @Composable
 @Preview(showBackground = true)
 fun CallLogGeneratorAppPreview() {
