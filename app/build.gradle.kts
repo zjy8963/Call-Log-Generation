@@ -154,5 +154,8 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    // CSV解析（如果需要用更专业的库，可选）
+    implementation("org.apache.commons:commons-csv:1.10.0")
+    implementation("com.google.android.gms:play-services-location:21.0.1")
 
 }

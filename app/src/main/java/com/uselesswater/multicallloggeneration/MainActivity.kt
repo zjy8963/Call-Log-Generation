@@ -81,6 +81,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Face
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Button
@@ -472,12 +473,34 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
+                    }
 
-                        // ========== 豆包AI识别按钮 ==========
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = phoneNumbersText,
+                        onValueChange = { phoneNumbersText = it },
+                        label = { Text(Constants.PHONE_NUMBER_LABEL) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp),
+                        placeholder = { Text(Constants.PHONE_NUMBER_PLACEHOLDER) },
+                        shape = MaterialTheme.shapes.medium
+                    )
+                    // 3. 新增：按钮行 - 放在输入框下方并排显示
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp), // 按钮之间12dp间距
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // AI识别按钮
                         var showDoubaoOcr by remember { mutableStateOf(false) }
 
                         Button(
                             onClick = { showDoubaoOcr = true },
+                            modifier = Modifier.weight(1f), // 等宽分布
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
@@ -495,7 +518,6 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
                             DoubaoOcrDialog(
                                 onDismiss = { showDoubaoOcr = false },
                                 onNumbersSelected = { nums ->
-                                    // 合并到现有号码
                                     val existing = phoneNumbersText
                                         .split("\n", " ", ",", "，")
                                         .map { it.trim() }
@@ -506,30 +528,63 @@ fun CallLogGeneratorApp(contentResolver: ContentResolver, checkPermission: (call
 
                                     showDoubaoOcr = false
 
-                                    // 成功提示
-                                    android.widget.Toast.makeText(
+                                    Toast.makeText(
                                         context,
                                         "✅ 识别成功，添加 ${nums.size} 个号码",
-                                        android.widget.Toast.LENGTH_SHORT
+                                        Toast.LENGTH_SHORT
                                     ).show()
                                 }
                             )
                         }
-                        // ====================================
+
+                        // 批量生成按钮
+                        var showPhoneGenerator by remember { mutableStateOf(false) }
+                        val repository = remember { PhoneNumberRepository(context) }
+                        val generator = remember { PhoneNumberGenerator(repository) }
+                        val locationService = remember { LocationService(context) }
+
+                        Button(
+                            onClick = { showPhoneGenerator = true },
+                            modifier = Modifier.weight(1f), // 等宽分布
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("号码生成")
+                        }
+
+                        if (showPhoneGenerator) {
+                            PhoneNumberGeneratorDialog(
+                                repository = repository,
+                                generator = generator,
+                                locationService = locationService,
+                                onDismiss = { showPhoneGenerator = false },
+                                onNumbersGenerated = { numbers ->
+                                    val existing = phoneNumbersText
+                                        .split("\n", " ", ",", "，")
+                                        .map { it.trim() }
+                                        .filter { it.length == 11 && it.matches(Regex("\\d{11}")) }
+
+                                    val merged = (existing + numbers).distinct()
+                                    phoneNumbersText = merged.joinToString("\n")
+
+                                    showPhoneGenerator = false
+
+                                    Toast.makeText(
+                                        context,
+                                        "✅ 生成成功，添加 ${numbers.size} 个号码",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            )
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    OutlinedTextField(
-                        value = phoneNumbersText,
-                        onValueChange = { phoneNumbersText = it },
-                        label = { Text(Constants.PHONE_NUMBER_LABEL) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(120.dp),
-                        placeholder = { Text(Constants.PHONE_NUMBER_PLACEHOLDER) },
-                        shape = MaterialTheme.shapes.medium
-                    )
                 }
             }
 

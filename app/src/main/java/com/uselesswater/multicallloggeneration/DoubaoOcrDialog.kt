@@ -116,7 +116,7 @@ fun DoubaoOcrDialog(
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("豆包AI识别")
+                Text("AI智能识别号码")
             }
         },
         text = {
