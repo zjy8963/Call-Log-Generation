@@ -87,7 +87,7 @@ fun PhoneNumberGeneratorDialog(
     // 模式选择：0-简单, 1-自动, 2-手动
     // 自动策略调整为默认选项
     var selectedMode by remember { mutableIntStateOf(1) }
-    val modeOptions = listOf("简单模式", "自动策略", "手动策略")
+    val modeOptions = listOf("简单策略", "自动策略", "手动策略")
 
     // 通用设置
     var selectedProvince by remember { mutableStateOf("山西") }
@@ -355,7 +355,7 @@ fun PhoneNumberGeneratorDialog(
                         0 -> {
                             Column {
                                 Text(
-                                    "简单模式：所有号码均来自您指定的城市",
+                                    "简单策略：所有号码均来自您指定的城市",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

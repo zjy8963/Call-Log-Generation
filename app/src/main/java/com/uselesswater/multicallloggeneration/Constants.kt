@@ -4,13 +4,12 @@ package com.uselesswater.multicallloggeneration
  * 应用常量类，用于集中管理所有硬编码的常量
  */
 object Constants {
-    
+
     // 权限相关
     const val PERMISSION_READ_CALL_LOG = android.Manifest.permission.READ_CALL_LOG
     const val PERMISSION_WRITE_CALL_LOG = android.Manifest.permission.WRITE_CALL_LOG
     const val PERMISSION_READ_PHONE_STATE = android.Manifest.permission.READ_PHONE_STATE
     const val PERMISSION_READ_PHONE_NUMBERS = android.Manifest.permission.READ_PHONE_NUMBERS
-    
     // 日志标签
     const val TAG_MAIN_ACTIVITY = "MainActivity"
     const val TAG_DEBUG_CALL_LOG = "DebugCallLog"
@@ -37,12 +36,12 @@ object Constants {
     const val TIME_RANGE_MEDIUM_NAME = "30秒-1分钟"
     const val TIME_RANGE_LONG_NAME = "1分钟-5分钟"
     const val TIME_RANGE_CUSTOM_NAME = "自定义时长"
-    
+
     // 通话间隔时间（毫秒）
     const val CALL_INTERVAL_MIN = 40
     const val CALL_INTERVAL_MAX = 120
     const val MILLISECONDS_PER_SECOND = 1000L
-    
+
     // 界面文本
     const val APP_TITLE = "📞 李哥电访记录生成器"
     const val DEFAULT_MESSAGE = "本工具为爱电访的「空中的裤头·李」推出！\n请节制使用！"
@@ -67,19 +66,41 @@ object Constants {
 
     const val CHECK_UPDATE_BUTTON_TEXT = "🔄 检查更新"
     const val AUTHOR_INFO = "Love 空中的裤头·李~"
-    
-    // 错误和成功消息
-    const val ERROR_NO_PHONE_NUMBERS = "请至少输入一个电话号码"
-    const val ERROR_GENERATION_FAILED = "❌ 生成失败: "
+
+    // ========== 弹窗和提示消息常量 ==========
+
+    // 权限相关
     const val ERROR_PERMISSION_DENIED = "❌ 生成失败: 权限不足。"
-    const val ERROR_SIM_NOT_FOUND = "无法找到选择的SIM卡 (SIM %d)。请检查SIM卡状态和权限。"
+    const val PERMISSION_GRANTED = "✅ 已获得所有必要权限"
+    const val PERMISSION_PARTIAL = "⚠️ 部分权限未授予，功能可能受限"
+    const val ERROR_CALL_LOG_PERMISSION_REQUIRED = "⚠️ 需要授予通话记录权限才能生成记录"
+
+    // 生成相关
+    const val ERROR_NO_PHONE_NUMBERS = "⚠️ 请至少输入一个电话号码"
+    const val ERROR_GENERATION_FAILED = "❌ 生成失败: "
+    const val ERROR_SIM_NOT_FOUND = "⚠️ 无法找到选择的SIM卡 (SIM %d)。请检查SIM卡状态和权限。"
     const val SUCCESS_GENERATION = "✅ 成功生成 %d 条通话记录！"
-    const val PERMISSION_GRANTED = "已获得所有必要权限"
-    const val PERMISSION_PARTIAL = "部分权限未授予，功能可能受限"
-    
+
+    // 识别相关
+    const val SUCCESS_RECOGNITION_ADD_NUMBERS = "✅ 识别成功，添加 %d 个号码"
+    const val SUCCESS_GENERATION_ADD_NUMBERS = "✅ 生成成功，添加 %d 个号码"
+
+    // 输入验证
+    const val ERROR_MIN_DURATION_GREATER_THAN_MAX = "⚠️ 最小时长不能大于最大时长"
+    const val ERROR_MAX_RECORDS_EXCEEDED = "⚠️ 一次最多生成1000条通话记录，当前：%d条"
+
+    // 更新检查
+    const val UPDATE_NO_UPDATE_AVAILABLE = "✅ 已是最新版本"
+    const val UPDATE_CHECK_FAILED = "❌ 检查更新失败"
+    const val UPDATE_PRE_RELEASE_WARNING = "⚠️ 预发布版本"
+
+    // 下载相关
+    const val DOWNLOAD_CANCELLED = "下载已取消"
+    const val DOWNLOAD_FAILED = "下载失败"
+
     // 日期时间格式
     const val DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm"
-    
+
     // SIM卡调试字段
     val POSSIBLE_SIM_FIELDS = arrayOf(
         "subscription_id", "sub_id", "sim_id", "simid",

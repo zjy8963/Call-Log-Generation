@@ -145,6 +145,7 @@ dependencies {
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.tools.core)
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)
