@@ -17,7 +17,7 @@ android {
         minSdk = 23
         targetSdk = 34
         versionCode = 1
-        versionName = "3.1.3"
+        versionName = "3.2.0"
         // 添加多dex支持（如果方法数过多）
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -35,11 +35,14 @@ android {
         val baiduApiKey = localProperties.getProperty("BAIDU_API_KEY", "")
         val baiduSecretKey = localProperties.getProperty("BAIDU_SECRET_KEY", "")
 
+        val qianfanApiKey = localProperties.getProperty("QIANFAN_API_KEY", "")
+
         // 生成 BuildConfig 字段
         buildConfigField("String", "DOUBAO_API_KEY", "\"$doubaoApiKey\"")
         buildConfigField("String", "DOUBAO_ENDPOINT_ID", "\"$doubaoEndpointId\"")
         buildConfigField("String", "BAIDU_API_KEY", "\"$baiduApiKey\"")
         buildConfigField("String", "BAIDU_SECRET_KEY", "\"$baiduSecretKey\"")
+        buildConfigField("String", "QIANFAN_API_KEY", "\"$qianfanApiKey\"")
         // =================================================================================
     }
 
@@ -160,4 +163,5 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.0.1")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.activity:activity-compose:1.8.2")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 }

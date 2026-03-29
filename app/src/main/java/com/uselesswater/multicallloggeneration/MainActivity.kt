@@ -101,6 +101,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.ui.graphics.painter.Painter
 
 class MainActivity : ComponentActivity() {
@@ -473,14 +474,13 @@ fun MainApp(
     checkPermission: ((Boolean) -> Unit) -> Boolean,
     showToast: (String) -> Unit
 ) {
-    // 当前选中的页面索引
+    // 当前选中的页面索引（0=首页, 1=短信, 2=我的）
     var selectedTab by remember { mutableIntStateOf(0) }
 
     Scaffold(
         bottomBar = {
-            // 使用紧凑的底部导航栏，不添加额外padding
             NavigationBar(
-                modifier = Modifier.height(65.dp)  // 微调高度，比之前高一点点
+                modifier = Modifier.height(65.dp)
             ) {
                 NavigationBarItem(
                     selected = selectedTab == 0,
@@ -498,6 +498,17 @@ fun MainApp(
                     onClick = { selectedTab = 1 },
                     icon = {
                         Icon(
+                            imageVector = Icons.Default.Email,  // 需要导入
+                            contentDescription = "短信记录"
+                        )
+                    },
+                    label = { Text("短信") }
+                )
+                NavigationBarItem(
+                    selected = selectedTab == 2,
+                    onClick = { selectedTab = 2 },
+                    icon = {
+                        Icon(
                             imageVector = Icons.Default.Person,
                             contentDescription = "我的"
                         )
@@ -506,36 +517,40 @@ fun MainApp(
                 )
             }
         },
-        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0.dp) // 禁用 Scaffold 默认的 content padding
+        contentWindowInsets = WindowInsets(0.dp)
     ) { innerPadding ->
-        // 结合 Scaffold 的 innerPadding 和系统栏的 padding
         val systemBarsPadding = WindowInsets.systemBars.asPaddingValues()
         val topPadding = maxOf(innerPadding.calculateTopPadding(), systemBarsPadding.calculateTopPadding())
         val bottomPadding = maxOf(innerPadding.calculateBottomPadding(), systemBarsPadding.calculateBottomPadding())
 
         when (selectedTab) {
             0 -> {
-                // 首页 - 原有的CallLogGeneratorApp
+                // 首页 - 通话记录生成
                 CallLogGeneratorApp(
                     contentResolver = contentResolver,
                     checkPermission = checkPermission,
                     showToast = showToast,
                     modifier = Modifier.padding(
                         top = topPadding,
-                        bottom = bottomPadding,
-                        start = 0.dp,
-                        end = 0.dp
+                        bottom = bottomPadding
                     )
                 )
             }
             1 -> {
+                // 短信记录生成（新增）
+                SmsGeneratorScreen(
+                    modifier = Modifier.padding(
+                        top = topPadding,
+                        bottom = bottomPadding
+                    )
+                )
+            }
+            2 -> {
                 // 我的页面
                 ProfileScreen(
                     modifier = Modifier.padding(
                         top = topPadding,
-                        bottom = bottomPadding,
-                        start = 0.dp,
-                        end = 0.dp
+                        bottom = bottomPadding
                     )
                 )
             }
@@ -1034,8 +1049,13 @@ fun CallLogGeneratorApp(
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
-                    }
 
+                        TextButton(
+                            onClick = { phoneNumbersText = "" }
+                        ) {
+                            Text("清空")
+                        }
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
 
                     OutlinedTextField(

@@ -43,7 +43,7 @@ object Constants {
     const val MILLISECONDS_PER_SECOND = 1000L
 
     // 界面文本
-    const val APP_TITLE = "📞 李哥电访记录生成器"
+    const val APP_TITLE = "📞 李哥通话记录生成器"
     const val DEFAULT_MESSAGE = "本工具为爱电访的「空中的裤头·李」推出！\n请节制使用！"
     const val PHONE_NUMBER_POOL_TITLE = "电话号码池"
     const val PHONE_NUMBER_PLACEHOLDER = "例如：\n13800138000\n13900139000\n13700137000"
@@ -126,4 +126,70 @@ object Constants {
 
     // 默认值
     const val DEFAULT_RING_DURATION = 15
+}
+
+// ========== 短信相关常量 ==========
+object SmsConstants {
+    // 权限相关
+    const val PERMISSION_READ_SMS = android.Manifest.permission.READ_SMS
+    const val PERMISSION_SEND_SMS = android.Manifest.permission.SEND_SMS
+    const val PERMISSION_RECEIVE_SMS = android.Manifest.permission.RECEIVE_SMS
+
+    // ContentProvider URI
+    const val SMS_URI = "content://sms"
+    const val SMS_INBOX_URI = "content://sms/inbox"
+    const val SMS_SENT_URI = "content://sms/sent"
+    const val SMS_DRAFT_URI = "content://sms/draft"
+
+    // 短信类型（Telephony.TextBasedSmsColumns）
+    const val SMS_TYPE_INBOX = 1      // 接收
+    const val SMS_TYPE_SENT = 2       // 发送
+    const val SMS_TYPE_DRAFT = 3      // 草稿
+    const val SMS_TYPE_OUTBOX = 4     // 发件箱（发送中）
+    const val SMS_TYPE_FAILED = 5     // 发送失败
+    const val SMS_TYPE_QUEUED = 6     // 队列中
+
+    // 短信状态
+    const val SMS_STATUS_NONE = -1
+    const val SMS_STATUS_COMPLETE = 0
+    const val SMS_STATUS_PENDING = 32
+    const val SMS_STATUS_FAILED = 64
+
+    // 读取状态
+    const val SMS_READ = 1
+    const val SMS_UNREAD = 0
+
+    // 界面文本
+    const val SMS_SCREEN_TITLE = "📨 李哥短信记录生成器"
+    const val SMS_DEFAULT_MESSAGE = "短信记录生成工具\n请节制使用！"
+
+    const val SMS_PHONE_LABEL = "电话号码池"
+    const val SMS_CONTENT_LABEL = "短信内容"
+    const val SMS_CONTENT_PLACEHOLDER = "请输入短信内容，或留空使用随机内容..."
+    const val SMS_GENERATE_BUTTON_TEXT = "🚀 批量生成短信记录"
+
+    // 错误提示
+    const val ERROR_NOT_DEFAULT_SMS_APP = "⚠️ 需要设为默认短信应用才能写入记录"
+    const val ERROR_SMS_PERMISSION_REQUIRED = "⚠️ 需要短信权限"
+    const val ERROR_NO_SMS_CONTENT = "⚠️ 请至少输入一条短信内容或手机号"
+    const val SUCCESS_SMS_GENERATION = "✅ 成功生成 %d 条短信记录！"
+    const val ERROR_RESTORE_DEFAULT_SMS = "⚠️ 请手动恢复默认短信应用"
+
+    // 短信内容模板（用于随机生成）
+    val SMS_TEMPLATES = listOf(
+        "您好，请问明天有空吗？",
+        "收到，谢谢！",
+        "快递已放到门口，请查收。",
+        "晚上一起吃饭吗？",
+        "文件已发送，请查收。",
+        "好的，没问题。",
+        "明天上午10点开会，请准时参加。",
+        "验证码：123456，请勿泄露。",
+        "您的订单已发货，请注意查收。",
+        "周末有空出来玩吗？"
+    )
+
+    // 短信间隔时间（毫秒）
+    const val SMS_INTERVAL_MIN = 30 * 1000L    // 30秒
+    const val SMS_INTERVAL_MAX = 5 * 60 * 1000L // 5分钟
 }
