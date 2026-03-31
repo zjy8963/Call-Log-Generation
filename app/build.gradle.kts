@@ -17,7 +17,7 @@ android {
         minSdk = 23
         targetSdk = 34
         versionCode = 1
-        versionName = "3.2.0"
+        versionName = "3.3.0"
         // 添加多dex支持（如果方法数过多）
         multiDexEnabled = true
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -164,4 +164,16 @@ dependencies {
     implementation("androidx.fragment:fragment-ktx:1.6.2")
     implementation("androidx.activity:activity-compose:1.8.2")
     implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.compose.material:material-icons-extended:1.6.0")
+    // 可选：视频播放
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.media3:media3-ui:1.2.0")
+    // 权限请求
+    implementation("com.google.accompanist:accompanist-permissions:0.32.0")
+
+    implementation("androidx.media3:media3-common:1.2.0")
+// 可选：如果需要支持HLS(m3u8)格式
+    implementation("androidx.media3:media3-exoplayer-hls:1.2.0")
+// 可选：如果需要支持DASH格式
+    implementation("androidx.media3:media3-exoplayer-dash:1.2.0")
 }

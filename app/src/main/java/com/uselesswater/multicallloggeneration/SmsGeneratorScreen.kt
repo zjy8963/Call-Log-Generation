@@ -23,7 +23,9 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -448,131 +450,70 @@ fun SmsGeneratorScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // ========== 快捷模板按钮 - 一行三个，均匀分布 ==========
+// ========== 快捷模板按钮 - 动态每行三个 ==========
                     val templateKeys = QianfanApiService.BASE_PROMPTS.keys.toList()
+                    val rows = templateKeys.chunked(3) // 每3个一组
 
-                    // 第一行
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        templateKeys.take(3).forEach { templateKey ->
-                            FilledTonalButton(
-                                onClick = {
-                                    if (apiKey.isNotEmpty()) {
-                                        scope.launch {
-                                            isAiGenerating = true
-                                            val result = aiService.generateFromTemplate(apiKey, templateKey)
-                                            isAiGenerating = false
-                                            result.onSuccess { content ->
-                                                smsContentText = content
-                                                showToast("已生成: $templateKey")
-                                            }.onFailure { error ->
-                                                showToast("生成失败: ${error.message}")
+                    rows.forEachIndexed { rowIndex, rowItems ->
+                        if (rowIndex > 0) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            rowItems.forEach { templateKey ->
+                                FilledTonalButton(
+                                    onClick = {
+                                        if (apiKey.isNotEmpty()) {
+                                            scope.launch {
+                                                isAiGenerating = true
+                                                val result = aiService.generateFromTemplate(
+                                                    apiKey,
+                                                    templateKey
+                                                )
+                                                isAiGenerating = false
+                                                result.onSuccess { content ->
+                                                    smsContentText = content
+                                                    showToast("已生成: $templateKey")
+                                                }.onFailure { error ->
+                                                    showToast("生成失败: ${error.message}")
+                                                }
                                             }
+                                        } else {
+                                            showToast("API Key未配置")
                                         }
-                                    } else {
-                                        showToast("API Key未配置")
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    templateKey,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1
-                                )
+                                    },
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 40.dp), // 增加最小高度
+                                    shape = MaterialTheme.shapes.small,
+                                    contentPadding = PaddingValues(
+                                        horizontal = 4.dp,
+                                        vertical = 8.dp
+                                    ) // 减小水平内边距，增加垂直内边距
+                                ) {
+                                    Text(
+                                        templateKey,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontSize = 12.sp // 明确指定字体大小
+                                        ),
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis, // 超出显示省略号
+                                        softWrap = false // 不换行
+                                    )
+                                }
+                            }
+
+                            // 填充剩余空间，保持对齐
+                            repeat(3 - rowItems.size) {
+                                Box(modifier = Modifier.weight(1f))
                             }
                         }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 第二行
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        templateKeys.subList(3, 6).forEach { templateKey ->
-                            FilledTonalButton(
-                                onClick = {
-                                    if (apiKey.isNotEmpty()) {
-                                        scope.launch {
-                                            isAiGenerating = true
-                                            val result = aiService.generateFromTemplate(apiKey, templateKey)
-                                            isAiGenerating = false
-                                            result.onSuccess { content ->
-                                                smsContentText = content
-                                                showToast("已生成: $templateKey")
-                                            }.onFailure { error ->
-                                                showToast("生成失败: ${error.message}")
-                                            }
-                                        }
-                                    } else {
-                                        showToast("API Key未配置")
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    templateKey,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // 第三行（剩余一个）
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // 第一个按钮
-                        templateKeys.getOrNull(6)?.let { templateKey ->
-                            FilledTonalButton(
-                                onClick = {
-                                    if (apiKey.isNotEmpty()) {
-                                        scope.launch {
-                                            isAiGenerating = true
-                                            val result = aiService.generateFromTemplate(apiKey, templateKey)
-                                            isAiGenerating = false
-                                            result.onSuccess { content ->
-                                                smsContentText = content
-                                                showToast("已生成: $templateKey")
-                                            }.onFailure { error ->
-                                                showToast("生成失败: ${error.message}")
-                                            }
-                                        }
-                                    } else {
-                                        showToast("API Key未配置")
-                                    }
-                                },
-                                modifier = Modifier.weight(1f),
-                                shape = MaterialTheme.shapes.small
-                            ) {
-                                Text(
-                                    templateKey,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    maxLines = 1
-                                )
-                            }
-                        }
-
-                        // 占位，保持布局一致
-                        if (templateKeys.size < 7) {
-                            Box(modifier = Modifier.weight(1f))
-                        }
-
-                        // 占位，保持布局一致
-                        Box(modifier = Modifier.weight(1f))
                     }
                 }
             }
-
             // ========== AI生成短信对话框 ==========
             if (showAiGenerateDialog) {
                 AlertDialog(

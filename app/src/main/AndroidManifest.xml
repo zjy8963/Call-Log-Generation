@@ -54,9 +54,15 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <!-- 存储权限（用于读取选择的图片） -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <!-- 👇 仅 Android 13 以下需要，高版本自动忽略，必须加上 maxSdkVersion -->
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.DOWNLOAD_WITHOUT_NOTIFICATION" />
+    <!-- 👇 Android 13+ 读取图片/视频的标准权限 -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
+    <!-- 👇 关键：Android 14+ 声明使用精选照片访问能力 -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
     <!-- 定位权限（自动模式需要） -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -98,6 +104,12 @@
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
+        <!-- 添加 Activity -->
+        <activity
+            android:name=".analyze.DouyinParserActivity"
+            android:exported="false"
+            android:label="抖音解析"
+            android:theme="@style/Theme.CallLogGeneration" />
         <!-- 短信接收器（成为默认短信应用必需） -->
         <receiver
             android:name=".sms.SmsReceiver"
